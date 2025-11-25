@@ -233,14 +233,14 @@ O módulo WEKA é completamente logado na auditoria.
 ```{=html}
 <!-- -->
 ```
-    mysql < database/create_tables.sql
+    sqlite3 < database/create_tables.sql
 
 2.  Carregar dados de teste:
 
 ```{=html}
 <!-- -->
 ```
-    mysql < database/seed_data.sql
+    sqlite3 < database/seed_data.sql
 
 3.  Iniciar o backend:
 

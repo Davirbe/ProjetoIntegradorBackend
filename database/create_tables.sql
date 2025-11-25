@@ -1,40 +1,34 @@
--- ============================================
--- CRIAÇÃO DO ESQUEMA (DATABASE)
--- ============================================
-CREATE DATABASE IF NOT EXISTS sistema_diagnostico
-    DEFAULT CHARACTER SET utf8mb4
-    COLLATE utf8mb4_unicode_ci;
-
-USE sistema_diagnostico;
+PRAGMA foreign_keys = ON;
 
 -- ============================================
 -- TABELA: INSTITUICAO
 -- ============================================
 CREATE TABLE Instituicao (
-    idInstituicao       INT AUTO_INCREMENT PRIMARY KEY,
-    nomeInstituicao     VARCHAR(150) NOT NULL,
-    cnpj                VARCHAR(18) UNIQUE,
-    enderecoFisico      VARCHAR(200),
-    enderecoEletronico  VARCHAR(200),
-    telefone            VARCHAR(20)
+    idInstituicao       INTEGER PRIMARY KEY AUTOINCREMENT,
+    nomeInstituicao     TEXT NOT NULL,
+    cnpj                TEXT UNIQUE,
+    enderecoFisico      TEXT,
+    enderecoEletronico  TEXT,
+    telefone            TEXT
 );
 
 -- ============================================
 -- TABELA: USUARIO
 -- ============================================
 CREATE TABLE Usuario (
-    idUsuario            INT AUTO_INCREMENT PRIMARY KEY,
-    nomeCompleto         VARCHAR(150) NOT NULL,
-    email                VARCHAR(120) UNIQUE NOT NULL,
-    senhaHash            VARCHAR(255) NOT NULL,
-    registroProfissional VARCHAR(50),
-    profissao            VARCHAR(50),
-    ativo                TINYINT(1) DEFAULT 1,
-    perfil               ENUM('MEDICO', 'TECNICO', 'ADMIN', 'AUDITOR') NOT NULL DEFAULT 'MEDICO',
-    idInstituicao        INT NOT NULL,
-    
-    CONSTRAINT fk_usuario_instituicao
-        FOREIGN KEY (idInstituicao)
+    idUsuario            INTEGER PRIMARY KEY AUTOINCREMENT,
+    nomeCompleto         TEXT NOT NULL,
+    email                TEXT UNIQUE NOT NULL,
+    senhaHash            TEXT NOT NULL,
+    registroProfissional TEXT,
+    profissao            TEXT,
+    ativo                INTEGER DEFAULT 1,
+    perfil               TEXT NOT NULL DEFAULT 'MEDICO',
+    idInstituicao        INTEGER NOT NULL,
+
+    CHECK (perfil IN ('MEDICO', 'TECNICO', 'ADMIN', 'AUDITOR')),
+
+    FOREIGN KEY (idInstituicao)
         REFERENCES Instituicao(idInstituicao)
         ON DELETE RESTRICT
         ON UPDATE CASCADE
@@ -44,22 +38,20 @@ CREATE TABLE Usuario (
 -- TABELA: IMAGEM_EXAME
 -- ============================================
 CREATE TABLE ImagemExame (
-    idImagem        INT AUTO_INCREMENT PRIMARY KEY,
-    idUsuario       INT NOT NULL,
-    idInstituicao   INT NOT NULL,
-    caminhoArquivo  VARCHAR(255) NOT NULL,
-    dataUpload      DATETIME DEFAULT CURRENT_TIMESTAMP,
-    descricaoOpcional VARCHAR(255),
-    tipoImagem      VARCHAR(50),
+    idImagem        INTEGER PRIMARY KEY AUTOINCREMENT,
+    idUsuario       INTEGER NOT NULL,
+    idInstituicao   INTEGER NOT NULL,
+    caminhoArquivo  TEXT NOT NULL,
+    dataUpload      TEXT DEFAULT CURRENT_TIMESTAMP,
+    descricaoOpcional TEXT,
+    tipoImagem      TEXT,
 
-    CONSTRAINT fk_imagem_usuario
-        FOREIGN KEY (idUsuario)
+    FOREIGN KEY (idUsuario)
         REFERENCES Usuario(idUsuario)
         ON DELETE CASCADE
         ON UPDATE CASCADE,
-    
-    CONSTRAINT fk_imagem_instituicao
-        FOREIGN KEY (idInstituicao)
+
+    FOREIGN KEY (idInstituicao)
         REFERENCES Instituicao(idInstituicao)
         ON DELETE RESTRICT
         ON UPDATE CASCADE
@@ -69,25 +61,25 @@ CREATE TABLE ImagemExame (
 -- TABELA: ANALISE_IMAGEM
 -- ============================================
 CREATE TABLE AnaliseImagem (
-    idAnalise            INT AUTO_INCREMENT PRIMARY KEY,
-    idImagem             INT NOT NULL,
-    idUsuarioSolicitante INT NULL,
-    dataHoraSolicitacao  DATETIME NOT NULL,
-    dataHoraConclusao    DATETIME NULL,
-    resultadoClassificacao ENUM('Maligno','Benigno','Cisto','Saudável') NOT NULL,
-    scoreConfianca       DECIMAL(5,3),
-    modeloVersao         VARCHAR(50),
-    modeloChecksum       VARCHAR(100),
-    hashImagem           VARCHAR(100),
+    idAnalise            INTEGER PRIMARY KEY AUTOINCREMENT,
+    idImagem             INTEGER NOT NULL,
+    idUsuarioSolicitante INTEGER,
+    dataHoraSolicitacao  TEXT NOT NULL,
+    dataHoraConclusao    TEXT,
+    resultadoClassificacao TEXT NOT NULL,
+    scoreConfianca       REAL,
+    modeloVersao         TEXT,
+    modeloChecksum       TEXT,
+    hashImagem           TEXT,
 
-    CONSTRAINT fk_analise_imagem
-        FOREIGN KEY (idImagem)
+    CHECK (resultadoClassificacao IN ('Maligno','Benigno','Cisto','Saudável')),
+
+    FOREIGN KEY (idImagem)
         REFERENCES ImagemExame(idImagem)
         ON DELETE CASCADE
         ON UPDATE CASCADE,
-    
-    CONSTRAINT fk_analise_usuario
-        FOREIGN KEY (idUsuarioSolicitante)
+
+    FOREIGN KEY (idUsuarioSolicitante)
         REFERENCES Usuario(idUsuario)
         ON DELETE SET NULL
         ON UPDATE CASCADE
@@ -97,25 +89,23 @@ CREATE TABLE AnaliseImagem (
 -- TABELA: LAUDO
 -- ============================================
 CREATE TABLE Laudo (
-    idLaudo               INT AUTO_INCREMENT PRIMARY KEY,
-    idAnalise             INT UNIQUE NOT NULL,
-    idUsuarioResponsavel  INT NULL,
-    dataHoraEmissao       DATETIME DEFAULT CURRENT_TIMESTAMP,
+    idLaudo               INTEGER PRIMARY KEY AUTOINCREMENT,
+    idAnalise             INTEGER UNIQUE NOT NULL,
+    idUsuarioResponsavel  INTEGER,
+    dataHoraEmissao       TEXT DEFAULT CURRENT_TIMESTAMP,
     textoLaudoCompleto    TEXT NOT NULL,
-    caminhoPDF            VARCHAR(255),
-    confirmouConcordancia TINYINT(1) NOT NULL,
-    ipEmissao             VARCHAR(45),
-    laudoFinalizado       TINYINT(1) DEFAULT 0,         -- 0 = rascunho, 1 = finalizado
-    codigoVerificacao     VARCHAR(50) UNIQUE,           -- UID do laudo (para validação externa)
+    caminhoPDF            TEXT,
+    confirmouConcordancia INTEGER NOT NULL,
+    ipEmissao             TEXT,
+    laudoFinalizado       INTEGER DEFAULT 0,
+    codigoVerificacao     TEXT UNIQUE,
 
-    CONSTRAINT fk_laudo_analise
-        FOREIGN KEY (idAnalise)
+    FOREIGN KEY (idAnalise)
         REFERENCES AnaliseImagem(idAnalise)
         ON DELETE CASCADE
         ON UPDATE CASCADE,
-    
-    CONSTRAINT fk_laudo_usuario
-        FOREIGN KEY (idUsuarioResponsavel)
+
+    FOREIGN KEY (idUsuarioResponsavel)
         REFERENCES Usuario(idUsuario)
         ON DELETE SET NULL
         ON UPDATE CASCADE
@@ -125,29 +115,23 @@ CREATE TABLE Laudo (
 -- TABELA: LOG_AUDITORIA
 -- ============================================
 CREATE TABLE LogAuditoria (
-    idLog      INT AUTO_INCREMENT PRIMARY KEY,
-    idUsuario  INT NULL,
-    dataHora   DATETIME DEFAULT CURRENT_TIMESTAMP,
-    acao       ENUM(
-                    'LOGIN_SUCESSO',
-                    'LOGIN_FALHA',
-                    'LOGOUT',
-                    'UPLOAD_IMAGEM',
-                    'ANALISE_SOLICITADA',
-                    'ANALISE_CONCLUIDA',
-                    'LAUDO_GERADO',
-                    'LAUDO_IMPRESSO',
-                    'LAUDO_ALTERADO',
-                    'LAUDO_VERSIONADO',
-                    'ERRO_SISTEMA'
-               ) NOT NULL,
-    recurso    VARCHAR(100),
+    idLog      INTEGER PRIMARY KEY AUTOINCREMENT,
+    idUsuario  INTEGER,
+    dataHora   TEXT DEFAULT CURRENT_TIMESTAMP,
+    acao       TEXT NOT NULL,
+    recurso    TEXT,
     detalhe    TEXT,
-    ipOrigem   VARCHAR(45),
-    protegido  TINYINT(1) DEFAULT 1,   -- 1 = não deve ser excluído (protegido por política)
+    ipOrigem   TEXT,
+    protegido  INTEGER DEFAULT 1,
 
-    CONSTRAINT fk_log_usuario
-        FOREIGN KEY (idUsuario)
+    CHECK (acao IN (
+        'LOGIN_SUCESSO', 'LOGIN_FALHA', 'LOGOUT', 'UPLOAD_IMAGEM',
+        'ANALISE_SOLICITADA', 'ANALISE_CONCLUIDA', 'LAUDO_GERADO',
+        'LAUDO_IMPRESSO', 'LAUDO_ALTERADO', 'LAUDO_VERSIONADO',
+        'ERRO_SISTEMA'
+    )),
+
+    FOREIGN KEY (idUsuario)
         REFERENCES Usuario(idUsuario)
         ON DELETE SET NULL
         ON UPDATE CASCADE
@@ -157,21 +141,19 @@ CREATE TABLE LogAuditoria (
 -- TABELA: HISTORICO_LAUDO
 -- ============================================
 CREATE TABLE HistoricoLaudo (
-    idHistorico          INT AUTO_INCREMENT PRIMARY KEY,
-    idLaudo              INT NOT NULL,
-    idUsuarioResponsavel INT NOT NULL,
-    dataHoraAlteracao    DATETIME DEFAULT CURRENT_TIMESTAMP,
+    idHistorico          INTEGER PRIMARY KEY AUTOINCREMENT,
+    idLaudo              INTEGER NOT NULL,
+    idUsuarioResponsavel INTEGER NOT NULL,
+    dataHoraAlteracao    TEXT DEFAULT CURRENT_TIMESTAMP,
     textoAnterior        TEXT NOT NULL,
-    ipAlteracao          VARCHAR(45),
+    ipAlteracao          TEXT,
 
-    CONSTRAINT fk_hist_laudo
-        FOREIGN KEY (idLaudo)
+    FOREIGN KEY (idLaudo)
         REFERENCES Laudo(idLaudo)
         ON DELETE CASCADE
         ON UPDATE CASCADE,
 
-    CONSTRAINT fk_hist_usuario
-        FOREIGN KEY (idUsuarioResponsavel)
+    FOREIGN KEY (idUsuarioResponsavel)
         REFERENCES Usuario(idUsuario)
         ON DELETE RESTRICT
         ON UPDATE CASCADE
@@ -181,21 +163,19 @@ CREATE TABLE HistoricoLaudo (
 -- TABELA: LAUDO_IMPRESSAO
 -- ============================================
 CREATE TABLE LaudoImpressao (
-    idImpressao INT AUTO_INCREMENT PRIMARY KEY,
-    idLaudo     INT NOT NULL,
-    idUsuario   INT NOT NULL,
-    dataHoraImpressao DATETIME DEFAULT CURRENT_TIMESTAMP,
-    ipOrigem    VARCHAR(45),
-    localImpressao VARCHAR(100),
+    idImpressao INTEGER PRIMARY KEY AUTOINCREMENT,
+    idLaudo     INTEGER NOT NULL,
+    idUsuario   INTEGER NOT NULL,
+    dataHoraImpressao TEXT DEFAULT CURRENT_TIMESTAMP,
+    ipOrigem    TEXT,
+    localImpressao TEXT,
 
-    CONSTRAINT fk_impressao_laudo
-        FOREIGN KEY (idLaudo)
+    FOREIGN KEY (idLaudo)
         REFERENCES Laudo(idLaudo)
         ON DELETE CASCADE
         ON UPDATE CASCADE,
 
-    CONSTRAINT fk_impressao_usuario
-        FOREIGN KEY (idUsuario)
+    FOREIGN KEY (idUsuario)
         REFERENCES Usuario(idUsuario)
         ON DELETE RESTRICT
         ON UPDATE CASCADE
